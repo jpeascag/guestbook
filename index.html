@@ -461,21 +461,12 @@
   <div id="entries-list" aria-live="polite" aria-label="Guestbook entries"></div>
 
   <!-- ─── Script ───────────────────────────────────────────── -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
-    const STORAGE_KEY = 'guestbook_entries_v1';
-
-    /* ── Persistence ─────────────────────────────────────────── */
-    function loadEntries() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      } catch {
-        return [];
-      }
-    }
-
-    function saveEntries(entries) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    }
+    /* ── Supabase client ─────────────────────────────────────── */
+    const SUPABASE_URL = 'https://wilxjynrpqoxfqhkviko.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbHhqeW5ycHFveGZxaGt2aWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTYxNTEsImV4cCI6MjA4Nzk3MjE1MX0.OKgici2ruy3fT7APWP0Usspp7QuNDlOB55S2agFoSBg';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     /* ── Formatting ──────────────────────────────────────────── */
     function formatTimestamp(iso) {
@@ -501,7 +492,7 @@
       el.innerHTML = `
         <div class="entry-header">
           <span class="entry-name">${escapeHtml(entry.name)}</span>
-          <time class="entry-time" datetime="${escapeHtml(entry.timestamp)}">${formatTimestamp(entry.timestamp)}</time>
+          <time class="entry-time" datetime="${escapeHtml(entry.created_at)}">${formatTimestamp(entry.created_at)}</time>
         </div>
         <p class="entry-message">${escapeHtml(entry.message)}</p>
       `;
@@ -525,8 +516,7 @@
       } else {
         const n = entries.length;
         countEl.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
-        // Newest first
-        [...entries].reverse().forEach(entry => {
+        entries.forEach(entry => {
           list.appendChild(renderEntry(entry, false));
         });
       }
@@ -542,7 +532,11 @@
       const el = renderEntry(entry, true);
       list.insertBefore(el, list.firstChild);
 
-      // Remove animation class after it completes
+      // Update count
+      const allEntries = list.querySelectorAll('.entry');
+      const n = allEntries.length;
+      countEl.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
+
       el.addEventListener('animationend', () => el.classList.remove('new-entry'), { once: true });
     }
 
@@ -562,14 +556,13 @@
     const submitBtn = document.getElementById('submit-btn');
     const countEl  = document.getElementById('entry-count');
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const name    = nameInput.value.trim();
       const message = textarea.value.trim();
 
       if (!name || !message) {
-        // Briefly shake the empty field
         const target = !name ? nameInput : textarea;
         target.style.borderColor = '#C0622A';
         target.style.boxShadow   = '0 0 0 3px rgba(192,98,42,0.15)';
@@ -581,22 +574,26 @@
         return;
       }
 
-      const entry = { name, message, timestamp: new Date().toISOString() };
-      const entries = loadEntries();
-      entries.push(entry);
-      saveEntries(entries);
-
-      // Update count label
-      const n = entries.length;
-      countEl.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
-
-      // Optimistic UI
       submitBtn.classList.add('submitting');
+      submitBtn.textContent = 'Posting…';
+
+      const { data, error } = await supabase
+        .from('entries')
+        .insert({ name, message })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        submitBtn.classList.remove('submitting');
+        submitBtn.innerHTML = '<span class="btn-icon">↩</span> Sign &amp; Post';
+        alert('Something went wrong. Please try again.');
+        return;
+      }
+
       submitBtn.textContent = 'Posted!';
+      prependEntry(data);
 
-      prependEntry(entry);
-
-      // Reset form
       form.reset();
       charCount.textContent = '0 / 500';
       charCount.classList.remove('warn');
@@ -607,8 +604,23 @@
       }, 1200);
     });
 
-    /* ── Init ────────────────────────────────────────────────── */
-    renderAll(loadEntries());
+    /* ── Load entries from Supabase ──────────────────────────── */
+    async function init() {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase fetch error:', error);
+        renderAll([]);
+        return;
+      }
+
+      renderAll(data);
+    }
+
+    init();
   </script>
 </body>
 </html>
