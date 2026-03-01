@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guestbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── Tokens ─────────────────────────────────────────────── */
+    :root {
+      --cream:      #F4EFE4;
+      --cream-mid:  #EDE5D4;
+      --cream-dark: #DDD3BE;
+      --ink:        #1C1812;
+      --ink-light:  #3D3628;
+      --ink-faint:  #7A6E5F;
+      --amber:      #B8783A;
+      --amber-light:#D49A5C;
+      --amber-pale: #F0DEC0;
+      --rule:       rgba(28, 24, 18, 0.14);
+      --shadow:     rgba(28, 24, 18, 0.08);
+      --radius:     3px;
+    }
+
+    /* ─── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── Paper texture via SVG data URI ─────────────────────── */
+    body {
+      min-height: 100vh;
+      background-color: var(--cream);
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      font-family: 'Lora', Georgia, serif;
+      color: var(--ink);
+      padding: 0 1rem 6rem;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────── */
+    header {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 4rem 0 2.5rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .header-rule {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.1s;
+    }
+
+    .header-rule::before,
+    .header-rule::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--amber), transparent);
+    }
+
+    .header-rule span {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2.6rem, 6vw, 4rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.25s;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--amber);
+    }
+
+    .subtitle {
+      margin-top: 0.85rem;
+      font-size: 1rem;
+      color: var(--ink-faint);
+      font-style: italic;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.4s;
+    }
+
+    /* ─── Card wrapper ───────────────────────────────────────── */
+    .card {
+      max-width: 680px;
+      margin: 0 auto 2.5rem;
+      background: #FDFAF4;
+      border: 1px solid var(--cream-dark);
+      border-radius: var(--radius);
+      box-shadow:
+        0 1px 3px var(--shadow),
+        0 8px 24px rgba(28, 24, 18, 0.05),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.55s;
+    }
+
+    /* ─── Form ───────────────────────────────────────────────── */
+    form {
+      padding: 2.25rem 2.5rem 2rem;
+    }
+
+    .form-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+      padding-bottom: 1.1rem;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .form-header .quill {
+      font-size: 1.1rem;
+      opacity: 0.5;
+    }
+
+    .form-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--ink-light);
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 0.45rem;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      background: var(--cream);
+      border: 1px solid var(--cream-dark);
+      border-radius: var(--radius);
+      padding: 0.75rem 0.9rem;
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      color: var(--ink);
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+      resize: vertical;
+    }
+
+    input[type="text"]::placeholder,
+    textarea::placeholder {
+      color: var(--ink-faint);
+      font-style: italic;
+      opacity: 0.6;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--amber-light);
+      background: #FFF9F0;
+      box-shadow: 0 0 0 3px rgba(184, 120, 58, 0.1);
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+      gap: 1rem;
+    }
+
+    .char-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--ink-faint);
+      letter-spacing: 0.05em;
+    }
+
+    .char-count.warn { color: #C0622A; }
+
+    button[type="submit"] {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--ink);
+      color: var(--cream);
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.65rem 1.4rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 2px 6px rgba(28,24,18,0.2);
+    }
+
+    button[type="submit"]:hover {
+      background: var(--ink-light);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(28,24,18,0.22);
+    }
+
+    button[type="submit"]:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(28,24,18,0.18);
+    }
+
+    button[type="submit"].submitting {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .btn-icon { font-size: 0.85rem; }
+
+    /* ─── Divider ─────────────────────────────────────────────── */
+    .divider {
+      max-width: 680px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.7s;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--rule);
+    }
+
+    .divider-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      white-space: nowrap;
+    }
+
+    #entry-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      color: var(--amber);
+    }
+
+    /* ─── Entries ─────────────────────────────────────────────── */
+    #entries-list {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    /* ─── Empty state ─────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 3.5rem 2rem;
+      background: #FDFAF4;
+      border: 1px solid var(--cream-dark);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      opacity: 0.35;
+      display: block;
+    }
+
+    .empty-state p {
+      font-style: italic;
+      color: var(--ink-faint);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .empty-state p strong {
+      font-style: normal;
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      color: var(--ink-light);
+    }
+
+    /* ─── Entry card ─────────────────────────────────────────── */
+    .entry {
+      background: #FDFAF4;
+      border: 1px solid var(--cream-dark);
+      border-radius: var(--radius);
+      padding: 1.6rem 2rem 1.5rem;
+      position: relative;
+      box-shadow: 0 1px 3px var(--shadow);
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .entry::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--amber-light), var(--amber));
+      border-radius: var(--radius) 0 0 var(--radius);
+    }
+
+    /* New-entry animation */
+    .entry.new-entry {
+      animation: inkReveal 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+    }
+
+    @keyframes inkReveal {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scaleY(0.96);
+        clip-path: inset(0 0 100% 0);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scaleY(1);
+        clip-path: inset(0 0 0% 0);
+      }
+    }
+
+    .entry-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .entry-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .entry-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--ink-faint);
+      white-space: nowrap;
+    }
+
+    .entry-message {
+      font-size: 0.95rem;
+      line-height: 1.72;
+      color: var(--ink-light);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ─── Animations ─────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      form { padding: 1.5rem 1.25rem; }
+      .entry { padding: 1.25rem 1.25rem 1.1rem; }
+      h1 { font-size: 2.4rem; }
+      .entry-header { flex-direction: column; gap: 0.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Header ───────────────────────────────────────────── -->
+  <header>
+    <div class="header-rule">
+      <span>Est. 2026</span>
+    </div>
+    <h1>The <em>Guestbook</em></h1>
+    <p class="subtitle">Leave a note. Let the world know you were here.</p>
+  </header>
+
+  <!-- ─── Form card ─────────────────────────────────────────── -->
+  <div class="card">
+    <form id="guestbook-form" novalidate>
+      <div class="form-header">
+        <span class="quill">✒️</span>
+        <h2>Sign the book</h2>
+      </div>
+
+      <div class="field">
+        <label for="name-input">Your name</label>
+        <input
+          type="text"
+          id="name-input"
+          placeholder="e.g. Virginia Woolf"
+          maxlength="80"
+          autocomplete="name"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="message-input">Your message</label>
+        <textarea
+          id="message-input"
+          placeholder="Say something kind, curious, or memorable…"
+          maxlength="500"
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-footer">
+        <span class="char-count" id="char-count">0 / 500</span>
+        <button type="submit" id="submit-btn">
+          <span class="btn-icon">↩</span>
+          Sign &amp; Post
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ─── Divider ───────────────────────────────────────────── -->
+  <div class="divider">
+    <span class="divider-label">Entries</span>
+    <span id="entry-count"></span>
+  </div>
+
+  <!-- ─── Entries ──────────────────────────────────────────── -->
+  <div id="entries-list" aria-live="polite" aria-label="Guestbook entries"></div>
+
+  <!-- ─── Script ───────────────────────────────────────────── -->
+  <script>
+    const STORAGE_KEY = 'guestbook_entries_v1';
+
+    /* ── Persistence ─────────────────────────────────────────── */
+    function loadEntries() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveEntries(entries) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    /* ── Formatting ──────────────────────────────────────────── */
+    function formatTimestamp(iso) {
+      const d = new Date(iso);
+      const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      return `${date} · ${time}`;
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* ── Render ──────────────────────────────────────────────── */
+    function renderEntry(entry, isNew = false) {
+      const el = document.createElement('article');
+      el.className = 'entry' + (isNew ? ' new-entry' : '');
+      el.setAttribute('aria-label', `Entry from ${escapeHtml(entry.name)}`);
+      el.innerHTML = `
+        <div class="entry-header">
+          <span class="entry-name">${escapeHtml(entry.name)}</span>
+          <time class="entry-time" datetime="${escapeHtml(entry.timestamp)}">${formatTimestamp(entry.timestamp)}</time>
+        </div>
+        <p class="entry-message">${escapeHtml(entry.message)}</p>
+      `;
+      return el;
+    }
+
+    function renderAll(entries) {
+      const list = document.getElementById('entries-list');
+      const countEl = document.getElementById('entry-count');
+      list.innerHTML = '';
+
+      if (entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = `
+          <span class="empty-icon">📖</span>
+          <p><strong>The book is open.</strong><br/>No one has signed yet — be the first to leave your mark.</p>
+        `;
+        list.appendChild(empty);
+        countEl.textContent = '';
+      } else {
+        const n = entries.length;
+        countEl.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
+        // Newest first
+        [...entries].reverse().forEach(entry => {
+          list.appendChild(renderEntry(entry, false));
+        });
+      }
+    }
+
+    function prependEntry(entry) {
+      const list = document.getElementById('entries-list');
+
+      // Remove empty state if present
+      const empty = list.querySelector('.empty-state');
+      if (empty) empty.remove();
+
+      const el = renderEntry(entry, true);
+      list.insertBefore(el, list.firstChild);
+
+      // Remove animation class after it completes
+      el.addEventListener('animationend', () => el.classList.remove('new-entry'), { once: true });
+    }
+
+    /* ── Char counter ────────────────────────────────────────── */
+    const textarea  = document.getElementById('message-input');
+    const charCount = document.getElementById('char-count');
+
+    textarea.addEventListener('input', () => {
+      const len = textarea.value.length;
+      charCount.textContent = `${len} / 500`;
+      charCount.classList.toggle('warn', len >= 450);
+    });
+
+    /* ── Form submit ─────────────────────────────────────────── */
+    const form = document.getElementById('guestbook-form');
+    const nameInput = document.getElementById('name-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const countEl  = document.getElementById('entry-count');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const name    = nameInput.value.trim();
+      const message = textarea.value.trim();
+
+      if (!name || !message) {
+        // Briefly shake the empty field
+        const target = !name ? nameInput : textarea;
+        target.style.borderColor = '#C0622A';
+        target.style.boxShadow   = '0 0 0 3px rgba(192,98,42,0.15)';
+        target.focus();
+        setTimeout(() => {
+          target.style.borderColor = '';
+          target.style.boxShadow   = '';
+        }, 1400);
+        return;
+      }
+
+      const entry = { name, message, timestamp: new Date().toISOString() };
+      const entries = loadEntries();
+      entries.push(entry);
+      saveEntries(entries);
+
+      // Update count label
+      const n = entries.length;
+      countEl.textContent = `${n} ${n === 1 ? 'entry' : 'entries'}`;
+
+      // Optimistic UI
+      submitBtn.classList.add('submitting');
+      submitBtn.textContent = 'Posted!';
+
+      prependEntry(entry);
+
+      // Reset form
+      form.reset();
+      charCount.textContent = '0 / 500';
+      charCount.classList.remove('warn');
+
+      setTimeout(() => {
+        submitBtn.classList.remove('submitting');
+        submitBtn.innerHTML = '<span class="btn-icon">↩</span> Sign &amp; Post';
+      }, 1200);
+    });
+
+    /* ── Init ────────────────────────────────────────────────── */
+    renderAll(loadEntries());
+  </script>
+</body>
+</html>
