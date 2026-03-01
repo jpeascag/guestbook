@@ -466,7 +466,7 @@
     /* ── Supabase client ─────────────────────────────────────── */
     const SUPABASE_URL = 'https://wilxjynrpqoxfqhkviko.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbHhqeW5ycHFveGZxaGt2aWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTYxNTEsImV4cCI6MjA4Nzk3MjE1MX0.OKgici2ruy3fT7APWP0Usspp7QuNDlOB55S2agFoSBg';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     /* ── Formatting ──────────────────────────────────────────── */
     function formatTimestamp(iso) {
@@ -577,7 +577,7 @@
       submitBtn.classList.add('submitting');
       submitBtn.textContent = 'Posting…';
 
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('entries')
         .insert({ name, message })
         .select()
@@ -606,7 +606,7 @@
 
     /* ── Load entries from Supabase ──────────────────────────── */
     async function init() {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('entries')
         .select('*')
         .order('created_at', { ascending: false });
